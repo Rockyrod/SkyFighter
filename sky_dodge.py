@@ -35,8 +35,10 @@ class Player(pygame.sprite.Sprite):
     def update(self, pressed_keys):
         if pressed_keys[K_UP]:
             self.rect.move_ip(0, -5)
+            move_up_sound.play()
         if pressed_keys[K_DOWN]:
             self.rect.move_ip(0, 5)
+            move_down_sound.play()
         if pressed_keys[K_LEFT]:
             self.rect.move_ip(-5, 0)
         if pressed_keys[K_RIGHT]:
@@ -74,17 +76,53 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.move_ip(-self.speed, 0)
         if self.rect.right < 0:
             self.kill()
+
+# Define the cloud object by extending pygame.sprite.Sprite
+# Use an image for a better-looking sprite
+
+class Cloud(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Cloud, self).__init__()
+        self.surf = pygame.image.load("images/cloud.png").convert()
+        self.surf.set_colorkey((0,0,0), RLEACCEL)
+        # The starting position is randomly generated
+        self.rect = self.surf.get_rect(
+            center = (
+                random.randint(SCREEN_WIDTH + 20, SCREEN_WIDTH + 100 ),
+                random.randint(0, SCREEN_HEIGHT)
+                )
+        )
+
+
+# Move the cloud based on constant speed
+# Remove the cloud when it passes left edge of the screen
+
+def update(self):
+    self.rect.move_ip(-5, 0)
+    if self.rect.right < 0:
+        self.kill()
+
+# setup for music and sound playback. Defaults are good
+
+pygame.mixer.init()
+
+
 # initialize the pygaem
 
 pygame.init()
+
+# setup the clock for a decent fremerate
+clock = pygame.time.Clock()
 
 # Create the screen object
 # The size is determined by the constant SCREEN_WIDTH and SCREEN_HEIGHT
 screen = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
 
-# Create a custom event for adding a new enemy
+# Create a custom event for adding a new enemy and new cloud
 ADDENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(ADDENEMY, 250)
+ADDCLOUD = pygame.USEREVENT + 2
+pygame.time.set_timer(ADDCLOUD, 1000)
 
 # Instantiate player, Right now, this is just a rectangle
 player = Player()
@@ -94,9 +132,27 @@ player = Player()
 # -all_sprites is used for rendering
 
 enemies = pygame.sprite.Group()
+clouds = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
 
+# Load and play background music
+# Sound source : chris Baily -artist Tripnet
+
+pygame.mixer.music.load("sounds/Sky_dodge_theme.ogg")
+pygame.mixer.music.play(loops=-1)
+pygame.mixer.music.set_volume(0.5)
+
+
+# Load all sounds file 
+move_up_sound = pygame.mixer.Sound("sounds/Jet_up.ogg")
+move_down_sound = pygame.mixer.Sound("sounds/Jet_down.ogg")
+collision_sound = pygame.mixer.Sound("sounds/Boom.ogg")
+
+# Adjust the volumes of the sounds
+move_up_sound.set_volume(0.6)
+move_down_sound.set_volume(0.6)
+collision_sound.set_volume(1.0)
 # Variable to keep the main loop  running
 
 running = True
@@ -121,15 +177,24 @@ while running:
             enemies.add(new_enemy)
             all_sprites.add(new_enemy)
 
+        # Add a new cloud?
+        elif event.type == ADDCLOUD:
+            # Create the new cloud and add it to sprite groups
+            new_cloud = Cloud()
+            clouds.add(new_cloud)
+            all_sprites.add(new_cloud)
+
+
     # Get the set of keys pressed and check the user input and then update
     pressed_keys = pygame.key.get_pressed()
     player.update(pressed_keys)
 
-    # Update enemy position 
+    # Update enemy position and cloud 
     enemies.update()
+    clouds.update()
 
-    # Fill the screen with black
-    screen.fill((0,0,0))
+    # Fill the screen with sky blue
+    screen.fill((135,206,250))
 
     # Draw all sprites
     
@@ -140,14 +205,27 @@ while running:
     if pygame.sprite.spritecollideany(player, enemies):
         # if so, then remove the player and stop the loop
         player.kill()
+        # Stop any moving sourds and play the collision soud
+        move_up_sound.stop()
+        move_down_sound.stop()
+        pygame.mixer.music.stop()
+        pygame.time.delay(50)
+        collision_sound.play()
+        pygame.time.delay(500)
+
+        # Stop the loop
         running = False
 
     # Update the display
     pygame.display.flip()
 
+    # Ensure program maintains a maximum rate of 30 frames per seconds
+    clock.tick(30)
+ 
 
+# All done! Stop and quit the mixer
 
-
+pygame.mixer.quit()
 
 
 
